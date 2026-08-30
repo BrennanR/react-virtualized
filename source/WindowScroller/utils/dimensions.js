@@ -41,6 +41,24 @@ export function getDimensions(
 }
 
 /**
+ * Whether the document body has been taken out of the normal flow.
+ *
+ * Modal libraries lock background scrolling on iOS by pinning the body with
+ * `position: fixed` and `top: -scrollY`, because that is the only technique
+ * Safari honours. While it is applied the document collapses to the height of
+ * the viewport, so any offset measured against it is short by the scroll
+ * position, and a position cached from that measurement stays wrong long
+ * after the lock is released.
+ */
+export function isBodyOutOfFlow(): boolean {
+  if (typeof document === 'undefined' || !document.body) {
+    return false;
+  }
+  const {position} = window.getComputedStyle(document.body);
+  return position === 'fixed' || position === 'absolute';
+}
+
+/**
  * Gets the vertical and horizontal position of an element within its scroll container.
  * Elements that have been “scrolled past” return negative values.
  * Handles edge-case where a user is navigating back (history) from an already-scrolled page.

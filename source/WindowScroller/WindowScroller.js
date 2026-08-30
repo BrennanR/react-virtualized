@@ -9,6 +9,7 @@ import {
   getDimensions,
   getPositionOffset,
   getScrollOffset,
+  isBodyOutOfFlow,
 } from './utils/dimensions';
 import createDetectElementResize from '../vendor/detectElementResize';
 
@@ -104,7 +105,11 @@ export default class WindowScroller extends React.PureComponent<Props, State> {
     const {height, width} = this.state;
 
     const thisNode = this._child || this._windowScrollerRef.current;
-    if (thisNode instanceof Element && scrollElement) {
+    // Skipped, rather than measured and corrected, while the body is out of
+    // flow: the position already cached was taken from a document in flow and
+    // is still right, and nothing can be scrolled to during a scroll lock
+    // anyway. Dimensions below stay live, since the viewport is unaffected.
+    if (thisNode instanceof Element && scrollElement && !isBodyOutOfFlow()) {
       const offset = getPositionOffset(thisNode, scrollElement);
       this._positionFromTop = offset.top;
       this._positionFromLeft = offset.left;

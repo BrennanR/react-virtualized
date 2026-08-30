@@ -147,6 +147,38 @@ describe('WindowScroller', () => {
   const isScrolling = () =>
     document.documentElement.classList.contains('ReactVirtualized__scrolling');
 
+  it('should not remeasure its position while the body is out of flow', () => {
+    // A modal library locking background scroll on iOS pins the body with
+    // position: fixed and top: -scrollY. That takes the body out of flow, so
+    // the document collapses to the viewport and every offset measured
+    // against it is short by the scroll position. Safari fires a resize
+    // whenever its toolbar collapses, so a resize lands inside that window
+    // routinely, and the position cached here is used long after the lock is
+    // released -- leaving the grid rendering a band of rows that is nowhere
+    // near the viewport.
+    const component = render(getMarkup());
+    const measured = component._positionFromTop;
+
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-5000px';
+    // What the collapsed document looks like to getBoundingClientRect.
+    Element.prototype.getBoundingClientRect = jest.fn(() => ({
+      top: -5000,
+      left: 0,
+    }));
+    document.documentElement.getBoundingClientRect = jest.fn(() => ({
+      top: 0,
+      left: 0,
+    }));
+
+    simulateWindowResize({height: 400, width: 500});
+
+    expect(component._positionFromTop).toEqual(measured);
+
+    document.body.style.position = '';
+    document.body.style.top = '';
+  });
+
   it('should stop suppressing hit testing after IS_SCROLLING_TIMEOUT', async () => {
     render(getMarkup());
     simulateWindowScroll({scrollY: 5000});

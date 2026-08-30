@@ -10,28 +10,36 @@ at 9.22.6, carrying one behavioural change.
 
 ## Why this fork exists
 
-`WindowScroller` stopped the browser hit testing recycled rows during a scroll
-by writing `pointer-events: none` onto `document.body`'s **inline style**,
-saving the previous value in a module global and restoring it 150ms later.
+Both changes come from the same place. Modal libraries lock background
+scrolling on iOS by pinning `document.body` with `position: fixed; top: -scrollY`, because that is the only technique Safari honours — Radix,
+Headless UI, MUI and `@zag-js/dismissable` (which most apps get transitively
+through Ark UI and Chakra UI) all do it. `WindowScroller` does not expect it,
+and reaches into global document state in two ways that break under it.
 
-Modal libraries claim that same inline property for as long as a dialog is
-open, with the same save-and-restore shape — `@zag-js/dismissable`, which most
-apps get transitively through Ark UI and Chakra UI, even names its variable
-`originalBodyPointerEvents` too. Two save/restore cycles over one global are
-safe only while they nest, and they interleave whenever opening a dialog is
-itself what scrolls the window, which is what an iOS scroll lock does. The
-dialog then captures the scroll's transient `none` as the page's resting value
-and restores it on close, leaving the document unable to receive any pointer
-event while still scrolling normally — and unrecoverable, because the next
-dialog captures the same poisoned value again.
+**Body's inline `pointer-events`.** `WindowScroller` suppressed hit testing
+during a scroll by writing that property, saving the previous value in a
+module global and restoring it 150ms later. Dialogs claim the same property
+with the same save-and-restore shape — zag even names its variable
+`originalBodyPointerEvents` too. Two such cycles over one global are safe only
+while they nest, and pinning the body is itself what scrolls the window, so
+they interleave: the dialog captures the scroll's transient `none` as the
+page's resting value and restores it on close, leaving the document unable to
+receive any pointer event while still scrolling normally. It never recovers,
+because the next dialog captures the same poisoned value.
 
-Upstream exposes no way to opt out, and the project is frozen: four releases
-since 2020, and an issue tracker held at zero open issues. So the behaviour is
-changed here instead.
+**Position cached from a collapsed document.** `WindowScroller` caches where
+its grid sits in the document and recomputes it on resize. While the body is
+pinned the document collapses to the viewport, so that measurement is short by
+the scroll offset — and Safari fires a resize every time its toolbar moves.
+Once the modal closes the grid renders a band of rows nowhere near the
+viewport, leaving the screen blank until something forces a fresh measurement.
 
-This fork expresses the same suppression as a class on the document element,
-so the two libraries stop sharing storage. Coverage, timing and `Grid`'s own
-inner-container suppression are unchanged.
+Upstream exposes no way to opt out of either, and the project is frozen: four
+releases since 2020, and an issue tracker held at zero open issues. So the
+behaviour is changed here instead — the suppression becomes a class on the
+document element, and the position measurement is skipped while the body is
+out of flow. Coverage, timing and `Grid`'s own inner-container suppression are
+unchanged.
 
 [**FORK.md**](FORK.md) has the full detail: the captured interleave, what
 changed, how to build and release, and how to run the tests.
@@ -41,7 +49,7 @@ changed, how to build and release, and how to run the tests.
 Released as a tarball attached to a GitHub Release rather than to a registry:
 
 ```jsonc
-"@brennanr/react-virtualized": "https://github.com/BrennanR/react-virtualized/releases/download/v9.22.6-fork.1/brennanr-react-virtualized-9.22.6-fork.1.tgz"
+"@brennanr/react-virtualized": "https://github.com/BrennanR/react-virtualized/releases/download/v9.22.6-fork.2/brennanr-react-virtualized-9.22.6-fork.2.tgz"
 ```
 
 Import `@brennanr/react-virtualized/styles.css` as you would upstream's — the
