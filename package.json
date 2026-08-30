@@ -1,9 +1,9 @@
 {
-  "name": "react-virtualized",
+  "name": "@brennanr/react-virtualized",
   "description": "React components for efficiently rendering large, scrollable lists and tabular data",
   "author": "Brian Vaughn <brian.david.vaughn@gmail.com>",
   "user": "bvaughn",
-  "version": "9.22.6",
+  "version": "9.22.6-fork.1",
   "homepage": "https://github.com/bvaughn/react-virtualized",
   "main": "dist/commonjs/index.js",
   "module": "dist/es/index.js",
@@ -27,14 +27,14 @@
     "typecheck": "flow check",
     "prettier": "prettier --write '{playground,source,docs}/**/*.{js,md}'",
     "prettier:diff": "prettier --list-different '{playground,source,docs}/**/*.{js,md}'",
-    "postpublish": "yarn run deploy",
-    "prepublishOnly": "yarn run build",
     "start": "cross-env NODE_ENV=development webpack-dev-server --hot --config webpack.config.dev.js",
     "test": "yarn run test:jest",
     "test:jest": "jest --no-watchman --runInBand",
     "test:coverage": "jest --no-watchman --maxWorkers 2 --coverage && codecov",
     "watch": "watch 'clear && yarn run test -s' source",
-    "watch:jest": "jest --no-watchman --watch"
+    "watch:jest": "jest --no-watchman --watch",
+    "build:pack": "cross-env NODE_ENV=es babel source --out-dir dist/es && cross-env NODE_ENV=commonjs babel source --out-dir dist/commonjs && flow-copy-source --ignore \"**/*.{jest,e2e,ssr,example}.js\" source/WindowScroller dist/es/WindowScroller && flow-copy-source --ignore \"**/*.{jest,e2e,ssr,example}.js\" source/AutoSizer dist/es/AutoSizer && postcss source/styles.css -o styles.css --use autoprefixer",
+    "prepack": "npm run build:pack"
   },
   "husky": {
     "hooks": {
@@ -47,7 +47,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/bvaughn/react-virtualized.git"
+    "url": "https://github.com/BrennanR/react-virtualized.git"
   },
   "keywords": [
     "react",

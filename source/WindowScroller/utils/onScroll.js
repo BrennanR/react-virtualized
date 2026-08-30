@@ -7,19 +7,28 @@ import {
 } from '../../utils/requestAnimationTimeout';
 import type WindowScroller from '../WindowScroller.js';
 
+// Hit testing is suppressed while the window scrolls by adding a class to the
+// document element, rather than by writing pointer-events onto body's inline
+// style. Modal and focus-trap libraries take ownership of that inline property
+// for as long as a dialog is open, saving its previous value and restoring it
+// on close. Writing the same property here made the two save/restore cycles
+// interleave rather than nest: a dialog opening part way through a scroll
+// recorded this transient 'none' as the page's resting value and put it back
+// when it closed, leaving the document permanently unable to receive a
+// pointer event. A class holds no value for anyone else to read back, and an
+// inline style outranks it in the cascade, so the two can coexist.
+const SCROLLING_CLASS_NAME = 'ReactVirtualized__scrolling';
+
 let mountedInstances = [];
-let originalBodyPointerEvents = null;
 let disablePointerEventsTimeoutId = null;
 
 function enablePointerEventsIfDisabled() {
   if (disablePointerEventsTimeoutId) {
     disablePointerEventsTimeoutId = null;
 
-    if (document.body && originalBodyPointerEvents != null) {
-      document.body.style.pointerEvents = originalBodyPointerEvents;
+    if (document.documentElement) {
+      document.documentElement.classList.remove(SCROLLING_CLASS_NAME);
     }
-
-    originalBodyPointerEvents = null;
   }
 }
 
@@ -48,14 +57,10 @@ function enablePointerEventsAfterDelay() {
 }
 
 function onScrollWindow(event: Event) {
-  if (
-    event.currentTarget === window &&
-    originalBodyPointerEvents == null &&
-    document.body
-  ) {
-    originalBodyPointerEvents = document.body.style.pointerEvents;
-
-    document.body.style.pointerEvents = 'none';
+  if (event.currentTarget === window && document.documentElement) {
+    // Idempotent, so unlike the inline style this needs no guard against
+    // several WindowScrollers racing to record the value first.
+    document.documentElement.classList.add(SCROLLING_CLASS_NAME);
   }
   enablePointerEventsAfterDelay();
   mountedInstances.forEach(instance => {

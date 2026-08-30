@@ -1,3 +1,10 @@
+/* WindowScroller adds this to the document element while the window is
+   scrolling, to keep the browser from hit testing the rows it is recycling. */
+
+.ReactVirtualized__scrolling body {
+  pointer-events: none;
+}
+
 /* Collection default theme */
 
 .ReactVirtualized__Collection {

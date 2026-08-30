@@ -144,24 +144,44 @@ describe('WindowScroller', () => {
     );
   });
 
-  it('should restore pointerEvents on body after IS_SCROLLING_TIMEOUT', async () => {
+  const isScrolling = () =>
+    document.documentElement.classList.contains('ReactVirtualized__scrolling');
+
+  it('should stop suppressing hit testing after IS_SCROLLING_TIMEOUT', async () => {
     render(getMarkup());
-    document.body.style.pointerEvents = 'all';
     simulateWindowScroll({scrollY: 5000});
-    expect(document.body.style.pointerEvents).toEqual('none');
+    expect(isScrolling()).toBe(true);
     await new Promise(resolve =>
       setTimeout(resolve, IS_SCROLLING_TIMEOUT + 100),
     );
-    expect(document.body.style.pointerEvents).toEqual('all');
+    expect(isScrolling()).toBe(false);
   });
 
-  it('should restore pointerEvents on body after unmount', () => {
+  it('should stop suppressing hit testing after unmount', () => {
     render(getMarkup());
-    document.body.style.pointerEvents = 'all';
     simulateWindowScroll({scrollY: 5000});
-    expect(document.body.style.pointerEvents).toEqual('none');
+    expect(isScrolling()).toBe(true);
     render.unmount();
-    expect(document.body.style.pointerEvents).toEqual('all');
+    expect(isScrolling()).toBe(false);
+  });
+
+  it('should leave a pointer-events style owned by another library alone', async () => {
+    // A dialog library owns body's inline pointer-events while it is open. A
+    // scroll starting underneath it must neither read nor write that value.
+    render(getMarkup());
+    document.body.style.pointerEvents = 'none';
+    simulateWindowScroll({scrollY: 5000});
+    await new Promise(resolve =>
+      setTimeout(resolve, IS_SCROLLING_TIMEOUT + 100),
+    );
+    expect(document.body.style.pointerEvents).toEqual('none');
+
+    document.body.style.pointerEvents = '';
+    simulateWindowScroll({scrollY: 6000});
+    await new Promise(resolve =>
+      setTimeout(resolve, IS_SCROLLING_TIMEOUT + 100),
+    );
+    expect(document.body.style.pointerEvents).toEqual('');
   });
 
   describe('onScroll', () => {

@@ -7,3 +7,5 @@ npm-debug.log
 styles.css
 .vscode
 .idea
+package-lock.json
+*.tgz
